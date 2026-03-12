@@ -1,0 +1,26 @@
+# Database config (contains password – use config/database.example.php as template)
+config/database.php
+
+# Dependencies
+/vendor/
+node_modules/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Uploaded files
+public/uploads/
+
+# IDE and OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Logs and cache
+*.log
+/cache/

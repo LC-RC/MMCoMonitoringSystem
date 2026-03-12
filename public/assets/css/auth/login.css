@@ -1,0 +1,305 @@
+/**
+ * Login page – proportional layout, responsive, SVG background
+ * All form logic and validation unchanged.
+ */
+
+/* ---------------------------------------------------------------------------
+   Design tokens
+   --------------------------------------------------------------------------- */
+:root {
+    --login-navy: #0b2b5b;
+    --login-navy-mid: #0f4c8a;
+    --login-navy-light: #1a74c8;
+    --login-accent: #89d5ef;
+    --login-space-2: 0.5rem;
+    --login-space-3: 0.75rem;
+    --login-space-4: 1rem;
+    --login-space-5: 1.25rem;
+    --login-space-6: 1.5rem;
+    --login-space-8: 2rem;
+    --login-radius: 14px;
+    --login-radius-lg: 18px;
+    --login-input-height: 2.875rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Page & background (SVG scales via background-size: cover in inline style)
+   --------------------------------------------------------------------------- */
+.login-page {
+    min-height: 100vh;
+    font-family: 'Inter', system-ui, sans-serif;
+}
+
+.login-page__inner {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--login-space-6);
+    box-sizing: border-box;
+}
+@media (min-width: 768px) {
+    .login-page__inner {
+        justify-content: flex-end;
+        padding: var(--login-space-8) var(--login-space-6) var(--login-space-8) var(--login-space-8);
+        padding-right: 12rem;
+    }
+}
+@media (min-width: 1024px) {
+    .login-page__inner {
+        padding-right: 14rem;
+    }
+}
+
+/* ---------------------------------------------------------------------------
+   Form wrap – proportional width, balanced spacing
+   --------------------------------------------------------------------------- */
+.login-form-wrap {
+    width: 100%;
+    max-width: 24rem;
+    animation: login-fade-in 0.4s ease-out;
+}
+
+.login-form-wrap__title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: #0f172a;
+    text-align: center;
+    margin: 0 0 var(--login-space-6);
+    line-height: 1.25;
+}
+@media (min-width: 480px) {
+    .login-form-wrap__title {
+        font-size: 1.625rem;
+    }
+}
+
+/* ---------------------------------------------------------------------------
+   Form stack – consistent vertical rhythm
+   --------------------------------------------------------------------------- */
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--login-space-5);
+}
+
+/* ---------------------------------------------------------------------------
+   Fields
+   --------------------------------------------------------------------------- */
+.login-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--login-space-2);
+}
+
+.login-field__error {
+    font-size: 0.75rem;
+    color: #b91c1c;
+    line-height: 1.3;
+}
+.login-field__error.hidden {
+    display: none !important;
+}
+
+/* ---------------------------------------------------------------------------
+   Input wrap – icon left, optional toggle right
+   --------------------------------------------------------------------------- */
+.login-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+}
+
+.login-input-icon {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--login-input-height);
+    color: #64748b;
+    pointer-events: none;
+    transition: color 0.2s;
+}
+.login-input-wrap:focus-within .login-input-icon {
+    color: var(--login-accent);
+}
+
+.login-input-icon svg {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.login-input {
+    width: 100%;
+    height: var(--login-input-height);
+    padding: 0 var(--login-space-4) 0 calc(var(--login-input-height) + var(--login-space-2));
+    font-size: 0.9375rem;
+    color: #0f172a;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: var(--login-radius);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+}
+
+.login-input::placeholder {
+    color: #64748b;
+}
+
+.login-input:hover {
+    border-color: rgba(148, 163, 184, 0.8);
+}
+
+.login-input:focus {
+    border-color: var(--login-accent);
+    box-shadow: 0 0 0 3px rgba(137, 213, 239, 0.25);
+}
+
+.login-input--error,
+.login-input--error:focus {
+    border-color: #dc2626;
+    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2);
+}
+
+/* Password field – toggle on the right */
+.login-input--password {
+    padding-right: var(--login-input-height);
+}
+
+.login-input-toggle {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: var(--login-input-height);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: none;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.login-input-toggle:hover {
+    color: #0f172a;
+}
+
+.login-input-toggle svg {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Options row – Remember Me + Forgot Password
+   --------------------------------------------------------------------------- */
+.login-options {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--login-space-4);
+    margin-top: var(--login-space-2);
+}
+
+.login-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--login-space-2);
+    font-size: 0.875rem;
+    color: #475569;
+    cursor: pointer;
+    user-select: none;
+}
+
+.login-checkbox__input {
+    width: 1rem;
+    height: 1rem;
+    accent-color: var(--login-navy-mid);
+    cursor: pointer;
+}
+
+.login-checkbox__label {
+    line-height: 1.4;
+}
+
+.login-link {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--login-navy-mid);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+.login-link:hover {
+    color: var(--login-navy-light);
+    text-decoration: underline;
+}
+
+/* ---------------------------------------------------------------------------
+   Submit button
+   --------------------------------------------------------------------------- */
+.login-btn {
+    width: 100%;
+    height: 3rem;
+    padding: 0 var(--login-space-6);
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(180deg, var(--login-navy) 0%, var(--login-navy-mid) 50%, var(--login-navy-light) 100%);
+    border: none;
+    border-radius: var(--login-radius-lg);
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(11, 43, 91, 0.35);
+    transition: filter 0.2s, transform 0.15s, box-shadow 0.2s;
+    margin-top: var(--login-space-2);
+}
+.login-btn:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(11, 43, 91, 0.4);
+}
+.login-btn:active {
+    transform: translateY(0);
+}
+.login-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(137, 213, 239, 0.4);
+}
+
+/* ---------------------------------------------------------------------------
+   Footer – Register link
+   --------------------------------------------------------------------------- */
+.login-footer {
+    font-size: 0.875rem;
+    color: #64748b;
+    text-align: center;
+    margin: var(--login-space-5) 0 0;
+    line-height: 1.5;
+}
+
+.login-footer .login-link {
+    font-weight: 600;
+}
+
+/* ---------------------------------------------------------------------------
+   Error shake (server/validation messages)
+   --------------------------------------------------------------------------- */
+.login-error-shake {
+    animation: login-shake 0.4s ease-in-out;
+}
+
+@keyframes login-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+}
+
+@keyframes login-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}

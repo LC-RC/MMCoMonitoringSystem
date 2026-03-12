@@ -1,0 +1,11 @@
+/**
+ * Main layout styles
+ * Theme-dependent rules (sidebar-bg, btn-primary, badge-accent) are output inline from layout for dynamic theming.
+ */
+body {
+    font-family: 'Inter', system-ui, sans-serif;
+}
+
+.transition-smooth {
+    transition: all 0.2s ease;
+}

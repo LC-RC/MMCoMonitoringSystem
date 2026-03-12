@@ -1,0 +1,10 @@
+# Ensure requests to this folder use index.php
+DirectoryIndex index.php
+
+# Send all requests to index.php so the router can handle /login, /dashboard, etc.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ index.php [QSA,L]
+</IfModule>
