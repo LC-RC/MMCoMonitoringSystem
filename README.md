@@ -26,9 +26,20 @@ A modern, modular PHP MVC management system for an Accounting Review Center.
 
 ### 1. Database
 
+Run in order (MySQL/phpMyAdmin):
+
+1. `database/schema.sql` – creates database and base tables  
+2. `database/migration_register_wizard.sql` – registration fields  
+3. `database/migration_birthday_address.sql` – birthday, address, gender, civil status  
+4. `database/migration_employee_id.sql` – employee ID column  
+5. `database/insert_admin_now.sql` – create admin (admin.mmco@gmail.com / password123)
+
 ```bash
 mysql -u root -p < database/schema.sql
-mysql -u root -p mmco_accounting_system < database/seed.sql
+mysql -u root -p mmco_accounting_system < database/migration_register_wizard.sql
+mysql -u root -p mmco_accounting_system < database/migration_birthday_address.sql
+mysql -u root -p mmco_accounting_system < database/migration_employee_id.sql
+mysql -u root -p mmco_accounting_system < database/insert_admin_now.sql
 ```
 
 ### 2. Configuration
@@ -83,7 +94,7 @@ Default login (admin only):
   /Views          (auth/, dashboard/, attendance/, payroll/, inventory/, projects/, users/, errors/, layouts/)
   helpers.php
 /config           (app.php, database.php)
-/database         (schema.sql, seed.sql, migrations)
+/database         (schema.sql, migrations, insert_admin_now.sql)
 /public
   index.php, .htaccess
   /assets

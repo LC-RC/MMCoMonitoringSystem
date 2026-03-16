@@ -2,6 +2,13 @@
 /**
  * User Model
  * MM&Co Accounting Review Center Management System
+ *
+ * Database table: users
+ * Registration columns (must match DB after migrations – see database/ folder):
+ *   Base: name, email, password, role, department, is_ojt, required_hours, ojt_start_date
+ *   Extended: first_name, middle_name, last_name, personal_email, contact_number,
+ *   birthday, address, gender, civil_status, id_number, profile_photo_path,
+ *   school_name, ojt_kind, ojt_end_date, employee_id
  */
 
 namespace App\Models;
@@ -14,10 +21,20 @@ class User extends Model
     protected string $table = 'users';
 
     /**
-     * Find user by email
+     * Normalize email for storage and lookup (trim + lowercase).
+     * Ensures registration and login use the same format.
+     */
+    public static function normalizeEmail(string $email): string
+    {
+        return strtolower(trim($email));
+    }
+
+    /**
+     * Find user by email (uses normalized email; matches registration storage).
      */
     public function findByEmail(string $email): ?object
     {
+        $email = self::normalizeEmail($email);
         $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE email = ?");
         $stmt->execute([$email]);
         $result = $stmt->fetch(PDO::FETCH_OBJ);
@@ -83,6 +100,7 @@ class User extends Model
     /**
      * Get next Employee ID for given role and department. Format: TDYY## (T=Role, D=Dept, YY=year, ##=sequence).
      * Sequence never resets; continues across years.
+     * Uses employee_id column if present; falls back to id_number, then to prefix+01 if neither exists (e.g. pre-migration DB).
      */
     public function getNextEmployeeId(string $roleType, string $department): string
     {
@@ -91,16 +109,24 @@ class User extends Model
         $yy = date('y'); // 26 for 2026
         $prefix = $roleCode . $deptCode . $yy; // e.g. EI26, OI26
 
-        $stmt = $this->db->prepare(
-            "SELECT employee_id FROM {$this->table} WHERE employee_id IS NOT NULL AND employee_id LIKE ? ORDER BY employee_id DESC LIMIT 1"
-        );
-        $stmt->execute([$prefix . '%']);
-        $last = $stmt->fetch(PDO::FETCH_OBJ);
-
-        $nextSeq = 1;
-        if ($last && preg_match('/^' . preg_quote($prefix, '/') . '(\d+)$/', $last->employee_id ?? '', $m)) {
-            $nextSeq = (int) $m[1] + 1;
+        foreach (['employee_id', 'id_number'] as $column) {
+            try {
+                $stmt = $this->db->prepare(
+                    "SELECT {$column} FROM {$this->table} WHERE {$column} IS NOT NULL AND {$column} != '' AND {$column} LIKE ? ORDER BY {$column} DESC LIMIT 1"
+                );
+                $stmt->execute([$prefix . '%']);
+                $last = $stmt->fetch(PDO::FETCH_OBJ);
+                $nextSeq = 1;
+                if ($last && isset($last->{$column}) && preg_match('/^' . preg_quote($prefix, '/') . '(\d+)$/', (string) $last->{$column}, $m)) {
+                    $nextSeq = (int) $m[1] + 1;
+                }
+                return $prefix . str_pad((string) $nextSeq, 2, '0', STR_PAD_LEFT);
+            } catch (\PDOException $e) {
+                // Column may not exist (e.g. migration not run); try next column or fallback
+                continue;
+            }
         }
-        return $prefix . str_pad((string) $nextSeq, 2, '0', STR_PAD_LEFT);
+
+        return $prefix . '01';
     }
 }

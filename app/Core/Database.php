@@ -1,7 +1,8 @@
 <?php
 /**
  * Database Connection Class
- * PDO-based singleton for secure connections
+ * PDO-based singleton for secure connections.
+ * Config: config/database.php (see config/database.example.php for keys: host, dbname, username, password, charset, options).
  * MM&Co Accounting Review Center Management System
  */
 

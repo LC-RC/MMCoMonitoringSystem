@@ -43,11 +43,11 @@ class AuthController extends Controller
     {
         $this->requireCsrf();
 
-        $email = trim($_POST['email'] ?? '');
-        $password = $_POST['password'] ?? '';
+        $email = User::normalizeEmail((string) ($_POST['email'] ?? ''));
+        $password = (string) ($_POST['password'] ?? '');
 
         // Field-specific validation
-        if (empty($email)) {
+        if ($email === '') {
             $_SESSION['login_error_email'] = 'Email is required.';
             $this->redirect('/login');
         }
@@ -346,9 +346,12 @@ class AuthController extends Controller
             $this->redirect('/register');
         }
 
-        // Ensure MMCO email is unique (stored as primary email)
+        // Normalize email for storage and login lookup (same format for both)
+        $loginEmail = User::normalizeEmail($data['mmco_email']);
+
+        // Ensure MMCO email is unique (stored as primary email; same column used for login)
         $userModel = new User();
-        if ($userModel->findByEmail($data['mmco_email'])) {
+        if ($userModel->findByEmail($loginEmail)) {
             $_SESSION['register_errors'] = ['mmco_email' => 'MMCO email already exists.'];
             $_SESSION['register_old'] = $old;
             $_SESSION['register_step'] = 1;
@@ -401,11 +404,11 @@ class AuthController extends Controller
             // ignore if table not present
         }
 
-        // Create user (note: additional columns require DB migration)
+        // Create user: field names match DB columns (see User model and database migrations)
         $fullName = trim($data['first_name'] . ' ' . ($data['middle_name'] !== '' ? ($data['middle_name'] . ' ') : '') . $data['last_name']);
         $createData = [
             'name' => $fullName,
-            'email' => $data['mmco_email'],
+            'email' => $loginEmail,
             'password' => password_hash($data['password'], PASSWORD_BCRYPT),
             'role' => 'employee',
             'department' => $department,
@@ -414,10 +417,8 @@ class AuthController extends Controller
             'ojt_start_date' => ($isOjt && $data['start_date'] !== '') ? $data['start_date'] : null,
         ];
 
-        // Generate Employee ID server-side (avoids races; do not trust client value for insert)
         $employeeId = $userModel->getNextEmployeeId($data['user_type'], $department);
 
-        // Optional / extended fields (will work after migration)
         $createDataExtended = [
             'first_name' => $data['first_name'],
             'middle_name' => $data['middle_name'] !== '' ? $data['middle_name'] : null,
@@ -438,39 +439,60 @@ class AuthController extends Controller
 
         $createPayload = array_merge($createData, array_filter($createDataExtended, fn($v) => $v !== null));
         try {
-            // Try inserting with extended columns first
-            $userModel->create($createPayload);
+            $insertId = $userModel->create($createPayload);
+            if ($insertId < 1) {
+                $_SESSION['error'] = 'Account could not be created. Please try again.';
+                $_SESSION['register_old'] = $old;
+                $this->redirect('/register');
+                return;
+            }
         } catch (\Throwable $e) {
             $code = $e->getCode();
-            $isDuplicate = (strpos($e->getMessage(), 'Duplicate') !== false || $code === '23000' || (int) $code === 23000);
+            $msg = $e->getMessage();
+            $isDuplicate = (strpos($msg, 'Duplicate') !== false || $code === '23000' || (int) $code === 23000);
             if ($isDuplicate) {
                 $employeeId = $userModel->getNextEmployeeId($data['user_type'], $department);
                 $createDataExtended['id_number'] = $employeeId;
                 $createDataExtended['employee_id'] = $employeeId;
                 $createPayload = array_merge($createData, array_filter($createDataExtended, fn($v) => $v !== null));
                 try {
-                    $userModel->create($createPayload);
+                    $insertId = $userModel->create($createPayload);
+                    if ($insertId < 1) {
+                        $_SESSION['error'] = 'Registration failed due to a conflict. Please try again.';
+                        $_SESSION['register_old'] = $old;
+                        $_SESSION['register_step'] = 3;
+                        $this->redirect('/register');
+                        return;
+                    }
                 } catch (\Throwable $e2) {
                     $_SESSION['error'] = 'Registration failed due to a conflict. Please try again.';
                     $_SESSION['register_old'] = $old;
                     $_SESSION['register_step'] = 3;
                     $this->redirect('/register');
+                    return;
                 }
             } else {
-                // Fallback to minimal columns (for pre-migration DB)
+                // Unknown column or other DB error: fallback to base columns only
                 try {
-                    $userModel->create($createData);
+                    $insertId = $userModel->create($createData);
+                    if ($insertId < 1) {
+                        $_SESSION['error'] = 'Unable to create account. Please try again.';
+                        $_SESSION['register_old'] = $old;
+                        $_SESSION['register_step'] = 1;
+                        $this->redirect('/register');
+                        return;
+                    }
                 } catch (\Throwable $e2) {
-                    $_SESSION['error'] = 'Unable to create account. Please ensure the database has been migrated.';
+                    $_SESSION['error'] = 'Unable to create account. Please run the database migrations (see database/ folder) and try again.';
                     $_SESSION['register_old'] = $old;
                     $_SESSION['register_step'] = 1;
                     $this->redirect('/register');
+                    return;
                 }
             }
         }
 
         $_SESSION['success'] = 'Account Successfully Created';
-        $_SESSION['register_step'] = 1;
         $_SESSION['register_old'] = [];
         $this->redirect('/register');
     }

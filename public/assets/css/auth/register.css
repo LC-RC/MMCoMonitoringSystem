@@ -496,7 +496,9 @@
 
 .reg-profile-avatar-wrap {
     position: relative;
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     line-height: 0;
 }
 
@@ -505,10 +507,12 @@
     height: 6rem;
     border-radius: var(--reg-radius-lg);
     object-fit: cover;
+    object-position: center center;
     border: 2px solid var(--reg-gray-200);
     background: var(--reg-gray-100);
     box-shadow: var(--reg-shadow-sm);
     display: block;
+    vertical-align: middle;
 }
 @media (min-width: 768px) {
     .reg-profile-avatar {

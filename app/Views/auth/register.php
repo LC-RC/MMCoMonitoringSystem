@@ -133,28 +133,28 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
                 <?php endif; ?>
 
                 <?php if (!empty($success)): ?>
-                    <div class="reg-success-overlay">
+                    <div class="reg-success-overlay" role="dialog" aria-labelledby="reg-success-title" aria-modal="true">
                         <div class="reg-success-card">
                             <div class="reg-success-icon">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-6 h-6">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M20 6L9 17l-5-5" />
                                 </svg>
                             </div>
-                            <h3 class="text-xl font-bold text-[#0f172a]">Account Successfully Created</h3>
+                            <h3 id="reg-success-title" class="text-xl font-bold text-[#0f172a]">Account Created Successfully</h3>
                             <p class="text-sm text-[#475569] mt-2 leading-relaxed">
                                 Your account has been successfully created.
-                                Please wait for approval from the Human Resources Department before you can access the system.
                             </p>
-                            <p class="text-sm text-[#475569] mt-2 leading-relaxed">
-                                You will be granted access once your account request has been reviewed and approved.
-                            </p>
-                            <a href="<?= base_path() ?>/login" class="reg-btn reg-btn--primary">
-                                Go Back to Login
-                            </a>
+                            <a href="<?= base_path() ?>/login" class="reg-btn reg-btn--primary">Back to Login</a>
                         </div>
                     </div>
                 <?php endif; ?>
 
+                <?php
+                // Form → backend alignment: POST keys match AuthController $data (name="...")
+                // Step 1: first_name, middle_name, last_name, birthday, gender, civil_status, contact_number, address, personal_email (hidden), personal_email_username (JS builds personal_email)
+                // Step 2: role_choice (→ user_type), department, department_other, employee_id (hidden), school_name, hours_needed (hidden), start_date, end_date
+                // Step 3: mmco_email_username (JS builds mmco_email), mmco_email (hidden), password, confirm_password. Step 4/5: terms, privacy_agreed
+                ?>
                 <form id="registerForm" action="<?= base_path() ?>/register" method="POST" enctype="multipart/form-data" class="reg-onboard-form" data-base-path="<?= htmlspecialchars(rtrim(base_path(), '/')) ?>">
                     <input type="hidden" name="_token" value="<?= \App\Core\Auth::csrfToken() ?>">
                     <input type="hidden" id="active_step" name="active_step" value="1">
@@ -165,7 +165,7 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
                         <div id="profileBlock" class="reg-profile-block">
                             <div class="reg-profile-avatar-wrap">
                                 <input type="file" name="profile_photo" id="profile_photo" accept="image/*" class="hidden" form="registerForm">
-                                <img id="profilePreview" alt="Profile" class="reg-profile-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Crect width='256' height='256' fill='%23F3F4F6'/%3E%3Crect x='60' y='52' width='136' height='136' rx='28' fill='%23CBD5E1'/%3E%3Cpath d='M88 178c18-30 40-45 60-45s42 15 60 45' fill='%23B6C2D1'/%3E%3Ccircle cx='128' cy='112' r='22' fill='%23B6C2D1'/%3E%3C/svg%3E">
+                                <img id="profilePreview" alt="Profile" class="reg-profile-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256' viewBox='0 0 256 256'%3E%3Crect width='256' height='256' fill='%23F3F4F6'/%3E%3Crect x='60' y='60' width='136' height='136' rx='28' fill='%23CBD5E1'/%3E%3Ccircle cx='128' cy='94' r='28' fill='%23B6C2D1'/%3E%3Cpath d='M72 190 Q 128 126 184 190 Z' fill='%23B6C2D1'/%3E%3C/svg%3E">
                                 <button type="button" id="btnPickPhoto" class="reg-profile-btn" aria-label="Upload photo">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5">
                                         <path d="M12 9a3 3 0 100 6 3 3 0 000-6z"/>
@@ -176,7 +176,6 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
                             <?php if (err($errors,'profile_photo') !== ''): ?><p class="reg-field__error"><?= err($errors,'profile_photo') ?></p><?php endif; ?>
                         </div>
                         <section class="reg-section">
-                            <h2 class="reg-section__title">Personal Information</h2>
                             <p class="reg-section__hint">Fields marked <span class="required">*</span> are required</p>
                             <div class="reg-section__content">
                                 <div class="reg-form-grid reg-form-grid--3">
@@ -350,6 +349,7 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
                                         <span id="mmco_email_domain" class="reg-input-suffix"><?= htmlspecialchars($mmcoDomainRaw !== '' ? $mmcoDomainRaw : '.mmco@gmail.com') ?></span>
                                     </div>
                                     <input type="hidden" name="mmco_email" id="mmco_email" value="<?= oldv($old,'mmco_email') ?>">
+                                    <p id="mmco_email_client_error" class="reg-field__error hidden"></p>
                                     <?php if (err($errors,'mmco_email') !== ''): ?><p class="reg-field__error"><?= err($errors,'mmco_email') ?></p><?php endif; ?>
                                 </div>
 
@@ -365,6 +365,7 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
                                                 </svg>
                                             </button>
                                         </div>
+                                        <p id="password_client_error" class="reg-field__error hidden"></p>
                                         <?php if (err($errors,'password') !== ''): ?><p class="reg-field__error"><?= err($errors,'password') ?></p><?php endif; ?>
 
                                         <div id="passwordHelp" class="reg-password-help hidden">
@@ -399,6 +400,7 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
                                             </button>
                                         </div>
                                         <?php if (err($errors,'confirm_password') !== ''): ?><p class="reg-field__error"><?= err($errors,'confirm_password') ?></p><?php endif; ?>
+                                        <p id="confirm_password_match_error" class="reg-field__error hidden" role="alert"></p>
                                     </div>
                                 </div>
                             </div>
@@ -536,29 +538,8 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
             function trimVal(el) { return (el && el.value) ? el.value.trim() : ''; }
             function isStepValid(step) {
                 if (step === 1) {
-                    var fn = document.getElementById('first_name');
-                    var ln = document.getElementById('last_name');
-                    var mn = document.getElementById('middle_name');
-                    var pe = document.getElementById('personal_email_username');
-                    var peHidden = document.getElementById('personal_email');
-                    var bd = document.getElementById('birthday');
-                    var addr = document.getElementById('address');
-                    var cn = document.getElementById('contact_number');
-                    var gen = document.getElementById('gender');
-                    var civ = document.getElementById('civil_status');
-                    if (!trimVal(fn).length || trimVal(fn).length < 3) return false;
-                    if (!trimVal(ln).length || trimVal(ln).length < 3) return false;
-                    if (trimVal(mn).length > 0 && trimVal(mn).length < 3) return false;
-                    var peUser = trimVal(pe);
-                    if (!peUser.length || !peHidden || !trimVal(peHidden).length || peUser.length < 8) return false;
-                    if (!trimVal(bd).length || !trimVal(addr).length || trimVal(addr).length < 15 || !trimVal(cn).length) return false;
-                    if (!gen || !gen.value || !civ || !civ.value) return false;
-                    var birth = new Date(bd.value);
-                    var today = new Date();
-                    today.setHours(0,0,0,0);
-                    birth.setHours(0,0,0,0);
-                    var age = Math.floor((today - birth) / (365.25 * 24 * 60 * 60 * 1000));
-                    return age >= 19 && age <= 100;
+                    if (typeof window.getStep1Valid === 'function') return window.getStep1Valid();
+                    return false;
                 }
                 if (step === 2) {
                     var re = document.getElementById('role_employee');
@@ -566,27 +547,36 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
                     var dept = document.getElementById('employeeDepartment');
                     var deptOther = document.getElementById('department_other');
                     var empId = document.getElementById('employee_id');
-                    if (typeof window.syncHoursHidden === 'function') window.syncHoursHidden();
+                    var schoolNameEl = document.getElementById('school_name');
+                    var hoursNeededEl = document.getElementById('hours_needed');
+                    var startDateEl = document.getElementById('start_date');
 
-                    // Require radios to exist and at least one role selected
                     if (!re || !ri) return false;
                     if (!re.checked && !ri.checked) return false;
-
-                    // Require Employee ID and Department to be present
-                    if (!empId || !trimVal(empId.value).length) return false;
+                    if (!empId || !trimVal(empId).length) return false;
                     if (!dept || !dept.value) return false;
-                    if (dept.value === 'Other' && !trimVal(deptOther).length) return false;
+                    if (dept.value === 'Other' && (!deptOther || !trimVal(deptOther).length)) return false;
 
-                    // Detailed intern requirements (school, hours, etc.) are enforced
-                    // via [required] attributes and validateForm()/server-side checks
-                    // when submitting the final step, so we don't block step navigation here.
+                    if (ri && ri.checked) {
+                        if (!schoolNameEl || !trimVal(schoolNameEl).length) return false;
+                        if (!hoursNeededEl || !trimVal(hoursNeededEl).length) return false;
+                        if (!startDateEl || !trimVal(startDateEl).length) return false;
+                    }
                     return true;
                 }
                 if (step === 3) {
                     var mmco = document.getElementById('mmco_email_username');
                     var pw = document.getElementById('password');
                     var cpw = document.getElementById('confirm_password');
-                    return trimVal(mmco).length > 0 && trimVal(pw).length > 0 && trimVal(cpw).length > 0;
+                    if (!mmco || !pw || !cpw) return false;
+                    var mmcoOk = trimVal(mmco).length > 0;
+                    var pwVal = (pw.value || '').trim();
+                    var cpwVal = (cpw.value || '').trim();
+                    var pwOk = pwVal.length > 0;
+                    var cpwOk = cpwVal.length > 0;
+                    var match = pwVal === cpwVal;
+                    var pwRulesOk = pwVal.length >= 8 && /[0-9]/.test(pwVal) && /[A-Z]/.test(pwVal) && /[^A-Za-z0-9]/.test(pwVal);
+                    return mmcoOk && pwOk && cpwOk && match && pwRulesOk;
                 }
                 if (step === 4) return termsCheckbox && termsCheckbox.checked;
                 if (step === 5) return termsCheckbox && termsCheckbox.checked && privacyCheckbox && privacyCheckbox.checked;
@@ -637,7 +627,9 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
             function goNext() {
                 if (currentStep >= TOTAL_STEPS) return;
                 if (!canProceedFromCurrentStep()) {
-                    if (currentStep === 1) validateIdentityFields(true);
+                    if (currentStep === 1 && window.validateIdentityFields) window.validateIdentityFields(true);
+                    if (currentStep === 2 && window.showStep2Errors) window.showStep2Errors();
+                    if (currentStep === 3 && window.showStep3Errors) window.showStep3Errors();
                     if (currentStep === 4 && termsCheckbox) termsCheckbox.focus();
                     if (currentStep === 5 && privacyCheckbox) privacyCheckbox.focus();
                     return;
@@ -1211,8 +1203,59 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
             strengthBar.style.width = width;
         }
 
+        function showPasswordMatchError(show) {
+            var msgEl = document.getElementById('confirm_password_match_error');
+            if (!msgEl) return;
+            if (show) {
+                msgEl.textContent = 'Passwords do not match.';
+                msgEl.classList.remove('hidden');
+                msgEl.classList.remove('text-gray-500');
+                msgEl.classList.add('text-red-600');
+                if (password) { password.classList.add('reg-input--error'); password.setAttribute('aria-invalid', 'true'); }
+                if (confirmPassword) { confirmPassword.classList.add('reg-input--error'); confirmPassword.setAttribute('aria-invalid', 'true'); }
+            } else {
+                msgEl.textContent = '';
+                msgEl.classList.add('hidden');
+                if (password) { password.classList.remove('reg-input--error'); password.removeAttribute('aria-invalid'); }
+                if (confirmPassword) { confirmPassword.classList.remove('reg-input--error'); confirmPassword.removeAttribute('aria-invalid'); }
+            }
+        }
+
+        function updatePasswordMatchState() {
+            if (!password || !confirmPassword) return;
+            var p = (password.value || '').trim();
+            var c = (confirmPassword.value || '').trim();
+            if (p === '' || c === '') {
+                showPasswordMatchError(false);
+            } else if (p !== c) {
+                showPasswordMatchError(true);
+            } else {
+                showPasswordMatchError(false);
+            }
+            if (window.regUpdateStepState) window.regUpdateStepState();
+        }
+        window.updatePasswordMatchState = updatePasswordMatchState;
+
+        function showStep3Errors() {
+            if (window.updatePasswordMatchState) window.updatePasswordMatchState();
+            if (!password) return;
+            var pw = (password.value || '').trim();
+            var lenOk = pw.length >= 8;
+            var numOk = /[0-9]/.test(pw);
+            var upperOk = /[A-Z]/.test(pw);
+            var specialOk = /[^A-Za-z0-9]/.test(pw);
+            if (pw.length > 0 && (!lenOk || !numOk || !upperOk || !specialOk)) {
+                setClientError(password, 'password_client_error', 'Password must meet all rules (min 8 characters, 1 number, 1 uppercase, 1 special character).');
+            } else {
+                setClientError(password, 'password_client_error', '');
+            }
+        }
+        window.showStep3Errors = showStep3Errors;
+
         function validateForm() {
             if (!form) return false;
+            showPasswordMatchError(false);
+
             const identityOk = validateIdentityFields(false);
 
             // Role selection: at least one must be selected
@@ -1231,7 +1274,19 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
                 if (el.type === 'checkbox' && !el.checked) return false;
                 if ((el.value || '').trim() === '') return false;
             }
-            if (password && confirmPassword && password.value !== confirmPassword.value) return false;
+            if (password && confirmPassword && password.value !== confirmPassword.value) {
+                showPasswordMatchError(true);
+                if (confirmPassword.focus) confirmPassword.focus();
+                return false;
+            }
+            if (password) {
+                var pw = (password.value || '').trim();
+                if (pw.length > 0 && (!(pw.length >= 8) || !/[0-9]/.test(pw) || !/[A-Z]/.test(pw) || !/[^A-Za-z0-9]/.test(pw))) {
+                    setClientError(password, 'password_client_error', 'Password must meet all rules (min 8 characters, 1 number, 1 uppercase, 1 special character).');
+                    if (password.focus) password.focus();
+                    return false;
+                }
+            }
             return true;
         }
 
@@ -1352,11 +1407,13 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
                 const trimmed = (contactNumber.value || '').trim();
                 const digitsOnly = /^\d+$/.test(trimmed);
                 const startsOk = trimmed.startsWith('09');
-                const valid = trimmed === '' || (digitsOnly && startsOk && trimmed.length === 11);
+                const valid = trimmed !== '' && digitsOnly && startsOk && trimmed.length === 11;
 
                 let msg = '';
                 let tone = 'error';
-                if (trimmed !== '' && !valid) {
+                if (trimmed === '') {
+                    msg = 'Contact number is required.';
+                } else if (!valid) {
                     if (!digitsOnly) {
                         msg = 'Contact number must contain numbers only.';
                     } else if (!startsOk) {
@@ -1372,6 +1429,33 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
 
             return ok;
         }
+        window.validateIdentityFields = validateIdentityFields;
+
+        window.getStep1Valid = function() {
+            var gen = document.getElementById('gender');
+            var civ = document.getElementById('civil_status');
+            return validateIdentityFields(false) && gen && (gen.value || '').trim() !== '' && civ && (civ.value || '').trim() !== '';
+        };
+
+        function showStep2Errors() {
+            var ri = document.getElementById('role_intern');
+            if (!ri || !ri.checked) return;
+            if (schoolName && !schoolName.closest('.hidden')) {
+                var t = (schoolName.value || '').trim();
+                if (!t.length) {
+                    setClientError(schoolName, 'school_name_client_error', 'School name is required.');
+                    if (schoolName.focus) schoolName.focus();
+                    return;
+                }
+            }
+            if (hoursNeeded && !(hoursNeeded.value || '').trim()) {
+                var hoursOpt = document.getElementById('hours_option');
+                if (hoursOpt && hoursOpt.focus) hoursOpt.focus();
+                return;
+            }
+            if (startDateEl && !(startDateEl.value || '').trim() && startDateEl.focus) startDateEl.focus();
+        }
+        window.showStep2Errors = showStep2Errors;
 
         function validateAndShowOneField(fieldId) {
             const el = document.getElementById(fieldId);
@@ -1416,9 +1500,10 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
                 const t = trimmed(contactNumber.value);
                 const digitsOnly = /^\d+$/.test(t);
                 const startsOk = t.startsWith('09');
-                const valid = t === '' || (digitsOnly && startsOk && t.length === 11);
+                const valid = t !== '' && digitsOnly && startsOk && t.length === 11;
                 let msg = '', tone = 'error';
-                if (t !== '' && !valid) {
+                if (t === '') msg = 'Contact number is required.';
+                else if (!valid) {
                     if (!digitsOnly) msg = 'Contact number must contain numbers only.';
                     else if (!startsOk) msg = 'Contact number must start with 09.';
                     else { msg = 'Contact number must be 11 digits.'; tone = 'hint'; }
@@ -1441,12 +1526,24 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
                 const t = trimmed(schoolName.value);
                 const valid = isLettersAndSpacesValid(schoolName.value);
                 setClientError(schoolName, 'school_name_client_error', (t === '' || valid) ? '' : 'School name must contain letters only. Numbers/special characters are not allowed.');
+            } else if (fieldId === 'mmco_email_username' && mmcoEmailUsername) {
+                const t = trimmed(mmcoEmailUsername.value);
+                if (t === '') setClientError(mmcoEmailUsername, 'mmco_email_client_error', 'MMCO email username is required.');
+                else setClientError(mmcoEmailUsername, 'mmco_email_client_error', '');
+            } else if (fieldId === 'password' && password) {
+                var pw = (password.value || '').trim();
+                if (pw.length > 0 && (!(pw.length >= 8) || !/[0-9]/.test(pw) || !/[A-Z]/.test(pw) || !/[^A-Za-z0-9]/.test(pw))) {
+                    setClientError(password, 'password_client_error', 'Password must meet all rules (min 8 characters, 1 number, 1 uppercase, 1 special character).');
+                } else {
+                    setClientError(password, 'password_client_error', '');
+                }
             }
         }
 
         function updateSubmitEnabled() {
-            const ok = validateForm();
-            btnSubmit.disabled = !ok;
+            // Do not disable Create Account here; submit button is controlled by regUpdateStepState (step 5 terms+privacy).
+            // Full validateForm() runs on submit and preventDefault if invalid (e.g. password mismatch).
+            if (window.regUpdateStepState) window.regUpdateStepState();
         }
 
         btnPickPhoto.addEventListener('click', () => profileFile.click());
@@ -1468,11 +1565,14 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
         if (mmcoEmailUsername) {
             mmcoEmailUsername.addEventListener('input', () => {
                 updateMmcoEmailByRole();
+                if ((mmcoEmailUsername.value || '').trim().length > 0) setClientError(mmcoEmailUsername, 'mmco_email_client_error', '');
                 updateSubmitEnabled();
             });
             mmcoEmailUsername.addEventListener('blur', () => {
                 mmcoEmailUsername.value = (mmcoEmailUsername.value || '').trim();
                 updateMmcoEmailByRole();
+                validateAndShowOneField('mmco_email_username');
+                updateSubmitEnabled();
             });
         }
 
@@ -1649,6 +1749,15 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
 
             if (el.id === 'password') {
                 updatePasswordUI();
+                if (password && password === el) {
+                    var pw = (el.value || '').trim();
+                    if (pw.length >= 8 && /[0-9]/.test(pw) && /[A-Z]/.test(pw) && /[^A-Za-z0-9]/.test(pw)) {
+                        setClientError(password, 'password_client_error', '');
+                    }
+                }
+            }
+            if (el.id === 'password' || el.id === 'confirm_password') {
+                updatePasswordMatchState();
             }
 
             updateSubmitEnabled();
@@ -1668,6 +1777,10 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
                 if (passwordHelp) { passwordHelp.classList.remove('hidden'); passwordHelp.classList.add('fade-in'); }
                 updatePasswordUI();
             });
+            password.addEventListener('blur', () => {
+                validateAndShowOneField('password');
+                if (window.regUpdateStepState) window.regUpdateStepState();
+            });
         }
         function hidePasswordHelpIfFocusLeaves() {
             setTimeout(() => {
@@ -1677,7 +1790,13 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
             }, 0);
         }
         if (password) password.addEventListener('blur', hidePasswordHelpIfFocusLeaves);
-        if (confirmPassword) confirmPassword.addEventListener('blur', hidePasswordHelpIfFocusLeaves);
+        if (confirmPassword) {
+            confirmPassword.addEventListener('blur', hidePasswordHelpIfFocusLeaves);
+            confirmPassword.addEventListener('blur', () => {
+                updatePasswordMatchState();
+                if (window.regUpdateStepState) window.regUpdateStepState();
+            });
+        }
 
         // Ensure UI matches any server-restored values (do not show errors on load)
         (function init() {
@@ -1698,12 +1817,13 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
 
         form.addEventListener('submit', (e) => {
             updateRoleUI();
+            updateMmcoEmailByRole();
+            updatePersonalEmail();
             updateSubmitEnabled();
             if (!validateForm()) {
                 e.preventDefault();
                 return;
             }
-
         });
     </script>
 </body>
