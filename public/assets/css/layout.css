@@ -9,3 +9,32 @@ body {
 .transition-smooth {
     transition: all 0.2s ease;
 }
+
+/* Sidebar collapse: narrow width, hide labels, center icons */
+#sidebar.sidebar-collapsed {
+    width: 5rem;
+}
+
+#sidebar.sidebar-collapsed .sidebar-label {
+    display: none;
+}
+
+#sidebar.sidebar-collapsed .sidebar-link {
+    justify-content: center;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+#sidebar.sidebar-collapsed .sidebar-header {
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+#sidebar.sidebar-collapsed .sidebar-header a {
+    justify-content: center;
+}
+
+#sidebar.sidebar-collapsed + main {
+    margin-left: 5rem;
+}

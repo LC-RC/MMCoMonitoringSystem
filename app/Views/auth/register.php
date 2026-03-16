@@ -343,10 +343,12 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
                             <h2 class="reg-section__title">Account Credentials</h2>
                             <div class="reg-section__content">
                                 <div class="reg-field reg-field--spaced">
-                                    <label class="reg-field__label" for="mmco_email_username">MMCO Email Address <span class="required">*</span></label>
+                                    <label class="reg-field__label" for="mmco_email_display">MMCO Email Address <span class="required"></span></label>
                                     <div class="reg-input-group">
-                                        <input type="text" name="mmco_email_username" id="mmco_email_username" value="<?= htmlspecialchars($mmcoUsernameRaw) ?>" required placeholder="Enter your MMCO username" maxlength="46" class="reg-input--left" autocomplete="username" inputmode="email">
-                                        <span id="mmco_email_domain" class="reg-input-suffix"><?= htmlspecialchars($mmcoDomainRaw !== '' ? $mmcoDomainRaw : '.mmco@gmail.com') ?></span>
+                                        <!-- Hidden username part used by JS/back-end -->
+                                        <input type="hidden" name="mmco_email_username" id="mmco_email_username" value="<?= htmlspecialchars($mmcoUsernameRaw) ?>">
+                                        <!-- Readonly full email shown to the user -->
+                                        <input type="text" id="mmco_email_display" value="<?= htmlspecialchars($mmcoEmailRaw) ?>" class="reg-input" autocomplete="off" readonly aria-readonly="true" placeholder="surname.firstname.mmco@gmail.com">
                                     </div>
                                     <input type="hidden" name="mmco_email" id="mmco_email" value="<?= oldv($old,'mmco_email') ?>">
                                     <p id="mmco_email_client_error" class="reg-field__error hidden"></p>
@@ -734,7 +736,7 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
         const personalEmailDomain = document.getElementById('personal_email_domain');
         const personalEmailHidden = document.getElementById('personal_email');
         const mmcoEmailUsername = document.getElementById('mmco_email_username');
-        const mmcoEmailDomain = document.getElementById('mmco_email_domain');
+        const mmcoEmailDisplay = document.getElementById('mmco_email_display');
         const mmcoEmailHidden = document.getElementById('mmco_email');
         const userType = document.getElementById('user_type');
 
@@ -1089,10 +1091,31 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
             return '.mmco@gmail.com';
         }
 
+        function buildMmcoUsernameFromNames() {
+            if (!firstName || !lastName) return '';
+            const first = (firstName.value || '').trim().toLowerCase();
+            const last = (lastName.value || '').trim().toLowerCase();
+            if (!first || !last) return '';
+            const full = last + '.' + first;
+            return full
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9._-]/g, '');
+        }
+
         function updateMmcoEmailByRole() {
-            if (!mmcoEmailUsername || !mmcoEmailDomain || !mmcoEmailHidden) return;
+            if (!mmcoEmailUsername || !mmcoEmailHidden) return;
+
             const domain = getMmcoDomain();
-            mmcoEmailDomain.textContent = domain;
+
+            // If user hasn't typed anything, or current value matches the old auto pattern,
+            // regenerate from first/last name so it auto-fills.
+            const autoFromNames = buildMmcoUsernameFromNames();
+            const current = (mmcoEmailUsername.value || '').trim().toLowerCase();
+            const wasAuto = current === '' || current === autoFromNames;
+
+            if (wasAuto && autoFromNames) {
+                mmcoEmailUsername.value = autoFromNames;
+            }
 
             const maxUser = Math.max(0, 60 - domain.length);
             mmcoEmailUsername.setAttribute('maxlength', String(maxUser));
@@ -1100,8 +1123,12 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
                 mmcoEmailUsername.value = (mmcoEmailUsername.value || '').slice(0, maxUser);
             }
 
-            const userPart = (mmcoEmailUsername.value || '').trim();
-            mmcoEmailHidden.value = userPart !== '' ? (userPart + domain) : '';
+            const userPart = (mmcoEmailUsername.value || '').trim().toLowerCase();
+            const full = userPart !== '' ? (userPart + domain) : '';
+            mmcoEmailHidden.value = full;
+            if (mmcoEmailDisplay) {
+                mmcoEmailDisplay.value = full;
+            }
         }
 
         function updatePersonalEmail() {
@@ -1364,11 +1391,13 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
 
             if (addressEl) {
                 const trimmed = (addressEl.value || '').trim();
+                const hasAlphaNum = /[A-Za-z0-9]/.test(trimmed);
                 let msg = '';
                 if (trimmed === '') msg = 'Address is required.';
                 else if (trimmed.length < 15) msg = 'Address must be at least 15 characters to ensure a complete address.';
+                else if (!hasAlphaNum) msg = 'Address must contain letters or numbers, not only symbols.';
                 if (show) setClientError(addressEl, 'address_client_error', msg);
-                ok = ok && trimmed.length >= 15;
+                ok = ok && trimmed.length >= 15 && hasAlphaNum;
             }
 
             if (personalEmailHidden && personalEmailUsername) {
@@ -1407,22 +1436,24 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
                 const trimmed = (contactNumber.value || '').trim();
                 const digitsOnly = /^\d+$/.test(trimmed);
                 const startsOk = trimmed.startsWith('09');
-                const valid = trimmed !== '' && digitsOnly && startsOk && trimmed.length === 11;
+                const sameAfterPrefix = /^09([0-9])\1{8}$/.test(trimmed);
+                const valid = trimmed !== '' && digitsOnly && startsOk && trimmed.length === 11 && !sameAfterPrefix;
 
                 let msg = '';
                 let tone = 'error';
                 if (trimmed === '') {
                     msg = 'Contact number is required.';
-                } else if (!valid) {
-                    if (!digitsOnly) {
-                        msg = 'Contact number must contain numbers only.';
-                    } else if (!startsOk) {
-                        msg = 'Contact number must start with 09.';
-                    } else {
-                        msg = 'Contact number must be 11 digits.';
-                        tone = 'hint';
-                    }
+                } else if (!digitsOnly) {
+                    msg = 'Contact number must contain numbers only.';
+                } else if (!startsOk) {
+                    msg = 'Contact number must start with 09.';
+                } else if (trimmed.length !== 11) {
+                    msg = 'Contact number must be 11 digits.';
+                    tone = 'hint';
+                } else if (sameAfterPrefix) {
+                    msg = 'Contact number cannot have all digits the same after 09.';
                 }
+
                 if (show) setClientError(contactNumber, 'contact_number_client_error', msg, tone);
                 ok = ok && valid;
             }
@@ -1486,9 +1517,11 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
                 setClientError(middleName, 'middle_name_client_error', msg);
             } else if (fieldId === 'address' && addressEl) {
                 const t = trimmed(addressEl.value);
+                const hasAlphaNum = /[A-Za-z0-9]/.test(t);
                 let msg = '';
                 if (t === '') msg = 'Address is required.';
                 else if (t.length < 15) msg = 'Address must be at least 15 characters to ensure a complete address.';
+                else if (!hasAlphaNum) msg = 'Address must contain letters or numbers, not only symbols.';
                 setClientError(addressEl, 'address_client_error', msg);
             } else if (fieldId === 'personal_email_username' && personalEmailUsername) {
                 const usernamePart = trimmed(personalEmailUsername.value);
@@ -1500,14 +1533,14 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
                 const t = trimmed(contactNumber.value);
                 const digitsOnly = /^\d+$/.test(t);
                 const startsOk = t.startsWith('09');
-                const valid = t !== '' && digitsOnly && startsOk && t.length === 11;
+                const sameAfterPrefix = /^09([0-9])\1{8}$/.test(t);
+                const valid = t !== '' && digitsOnly && startsOk && t.length === 11 && !sameAfterPrefix;
                 let msg = '', tone = 'error';
                 if (t === '') msg = 'Contact number is required.';
-                else if (!valid) {
-                    if (!digitsOnly) msg = 'Contact number must contain numbers only.';
-                    else if (!startsOk) msg = 'Contact number must start with 09.';
-                    else { msg = 'Contact number must be 11 digits.'; tone = 'hint'; }
-                }
+                else if (!digitsOnly) msg = 'Contact number must contain numbers only.';
+                else if (!startsOk) msg = 'Contact number must start with 09.';
+                else if (t.length !== 11) { msg = 'Contact number must be 11 digits.'; tone = 'hint'; }
+                else if (sameAfterPrefix) msg = 'Contact number cannot have all digits the same after 09.';
                 setClientError(contactNumber, 'contact_number_client_error', msg, tone);
             } else if (fieldId === 'birthday' && birthdayEl) {
                 const v = trimmed(birthdayEl.value);
@@ -1562,19 +1595,8 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
         if (departmentOther) departmentOther.addEventListener('input', () => { fetchNextEmployeeId(); updateSubmitEnabled(); });
         if (departmentOther) departmentOther.addEventListener('change', () => { fetchNextEmployeeId(); updateSubmitEnabled(); });
 
-        if (mmcoEmailUsername) {
-            mmcoEmailUsername.addEventListener('input', () => {
-                updateMmcoEmailByRole();
-                if ((mmcoEmailUsername.value || '').trim().length > 0) setClientError(mmcoEmailUsername, 'mmco_email_client_error', '');
-                updateSubmitEnabled();
-            });
-            mmcoEmailUsername.addEventListener('blur', () => {
-                mmcoEmailUsername.value = (mmcoEmailUsername.value || '').trim();
-                updateMmcoEmailByRole();
-                validateAndShowOneField('mmco_email_username');
-                updateSubmitEnabled();
-            });
-        }
+        // mmcoEmailUsername is hidden; value is auto-generated from first/last name and role,
+        // so we don't attach direct input listeners here.
 
         if (personalEmailUsername) {
             personalEmailUsername.addEventListener('input', () => {
@@ -1590,7 +1612,15 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
         }
 
         [firstName, lastName, middleName, addressEl, contactNumber, birthdayEl].forEach(function(el) {
-            if (el) el.addEventListener('blur', function() { validateAndShowOneField(el.id); updateSubmitEnabled(); });
+            if (!el) return;
+            el.addEventListener('blur', function() {
+                validateAndShowOneField(el.id);
+                // Keep MMCO email in sync with name changes when using the auto-generated pattern
+                if (el === firstName || el === lastName) {
+                    updateMmcoEmailByRole();
+                }
+                updateSubmitEnabled();
+            });
         });
         if (birthdayEl) birthdayEl.addEventListener('change', function() { validateAndShowOneField('birthday'); updateSubmitEnabled(); });
         if (schoolName) schoolName.addEventListener('blur', function() { validateAndShowOneField('school_name'); updateSubmitEnabled(); });
@@ -1669,7 +1699,10 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
 
             if (el.id === 'address' && addressEl === el) {
                 const trimmed = (el.value || '').trim();
-                if (trimmed.length >= 15) setClientError(addressEl, 'address_client_error', '');
+                const hasAlphaNum = /[A-Za-z0-9]/.test(trimmed);
+                if (trimmed.length >= 15 && hasAlphaNum) {
+                    setClientError(addressEl, 'address_client_error', '');
+                }
             }
 
             if (el.id === 'school_name') {
@@ -1704,25 +1737,9 @@ $birthdayMax = date('Y-m-d', strtotime('-19 years'));
                 const trimmed = (el.value || '').trim();
                 const digitsOnly = /^\d+$/.test(trimmed);
                 const startsOk = trimmed.startsWith('09');
-                const isValidNow = trimmed === '' || (digitsOnly && startsOk && trimmed.length === 11);
+                const sameAfterPrefix = /^09([0-9])\1{8}$/.test(trimmed);
+                const isValidNow = trimmed === '' || (digitsOnly && startsOk && trimmed.length === 11 && !sameAfterPrefix);
                 if (isValidNow) setClientError(el, 'contact_number_client_error', '');
-            }
-
-            if (el.id === 'mmco_email_username') {
-                const before = el.value;
-                const cleaned = before
-                    .toLowerCase()
-                    .replace(/\s+/g, '')
-                    .replace(/[^a-z0-9._-]/g, '');
-                if (cleaned !== before) {
-                    const caret = el.selectionStart;
-                    el.value = cleaned;
-                    if (typeof caret === 'number') {
-                        el.setSelectionRange(caret, caret);
-                    }
-                }
-                updateMmcoEmailByRole();
-                return;
             }
 
             // Allow normal spaces between words but prevent multiple consecutive spaces.
